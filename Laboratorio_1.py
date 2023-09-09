@@ -1,7 +1,10 @@
+from pickle import NONE
 import sys
 import json
+import math
+from this import s
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QDialog, QVBoxLayout, QTextEdit, QFileDialog, \
-    QLineEdit, QLabel, QMessageBox, QInputDialog
+    QLineEdit, QLabel, QMessageBox, QInputDialog, QWidget, QHBoxLayout
 
 class Persona:
     def __init__(self, nombre, dpi, date_birth, address):
@@ -10,212 +13,83 @@ class Persona:
         self.date_birth = date_birth
         self.address = address
 
-class NodoArbolB:
-    def __init__(self, hoja=True):
+class Nodo:
+    def __init__(self):
         self.claves = []
-        self.hijos = []
-        self.hoja = hoja
+        self.claves_usadas = 0
+        self.hoja = True
+        self.hijo = []
 
 class ArbolB:
     def __init__(self, grado):
-        self.raiz = NodoArbolB()
         self.grado = grado
+        self.lower = math.floor(self.grado-1)
+        self.upper = (2*grado - 1)
+        self.raiz = Nodo()
 
-    def insert(self, clave, persona):
-        nodo_actual = self.raiz
-        if len(nodo_actual.claves) == (2 * self.grado) - 1:
-            nueva_raiz = NodoArbolB(hoja=False)
-            nueva_raiz.hijos.append(self.raiz)
-            self.dividir(nueva_raiz, 0, self.raiz)
-            self.raiz = nueva_raiz
 
-        self.insertar_no_lleno(self.raiz, clave, persona)
+    def insertar (self, persona):
+        if self.raiz.claves_usadas <= self.upper:
+            self.raiz.claves.append(persona)
+        else:
+            r = self.raiz
+            if self.raiz.claves_usadas == self.upper:
+                s = Nodo()
+                self.raiz = s
+                s.hoja = False
+                s.claves_usadas = 0
+                s.hijo[0] = r
+                self.dividir(s, 0, r)
+                self.insertar_Nodo(s, persona)
+            else:
+                self.insertar_Nodo(r, persona)
 
-    def insertar_no_lleno(self, nodo, clave, persona):
-        i = len(nodo.claves) - 1
-
-        while i >= 0 and clave < nodo.claves[i]:
-            i -= 1
-
-        i += 1
-
+    def insertar_Nodo (self, nodo, persona):
         if nodo.hoja:
-            nodo.claves.insert(i, clave)
-            nodo.hijos.insert(i, persona)
+            i = nodo.claves_usadas
+            while i>=1 & persona.dpi < nodo.claves[i-1].dpi:
+                nodo.claves[i] = nodo.clave[i-1]
+                i -= 1
+            nodo.claves[i] = persona
+            nodo.claves_usadas += 1
         else:
-            if len(nodo.hijos[i].claves) == (2 * self.grado) - 1:
-                self.dividir(nodo, i, nodo.hijos[i])
-                if clave > nodo.claves[i]:
-                    i += 1
-            self.insertar_no_lleno(nodo.hijos[i], clave, persona)
+            j = 0
+            while j < nodo.claves_usadas & persona.dpi > nodo.clave[j].dpi:
+                j += 1
+            if nodo.hijo[j].claves_usadas == (2*self.t-1):
+                self.dividir(nodo, j, nodo.hijo[j])
+                if persona.dpi > nodo.claves[j]:
+                    j += 1
+            self.insertar_Nodo(nodo.hijo[j], persona)
 
-    def dividir(self, nodo_padre, indice, nodo_hijo):
-        nuevo_nodo = NodoArbolB(hoja=nodo_hijo.hoja)
+    def dividir(self, padre, posicion, hijo):
+        nuevo = Nodo()
+        nuevo.hoja = hijo.hoja
+        nuevo.claves_usadas = self.t -1
+        j = 0
+        while j < self.t - 1:
+            j += 1
+            nuevo.claves[j] =hijo.claves[j+self.t]
 
-        nodo_padre.claves.insert(indice, nodo_hijo.claves[self.grado - 1])
-        nodo_padre.hijos.insert(indice + 1, nuevo_nodo)
-        nodo_hijo.claves = nodo_hijo.claves[:self.grado - 1]
-        nodo_hijo.hijos = nodo_hijo.hijos[:self.grado]
+        if (hijo.hoja == False):
+            k = 0
+            while k < self.t:
+                k += 2
+                nuevo.hijo[k] = hijo.hijo[k+s]
 
-        for i in range(self.grado - 1):
-            nuevo_nodo.claves.append(nodo_hijo.claves[self.grado])
-            nodo_hijo.claves.pop(self.grado)
+        hijo.claves_usadas = self.t - 1
+        j = padre.claves_usadas
+        while j < posicion:
+            padre.hijo[j+1] = padre.hijo [j]
 
-        if not nodo_hijo.hoja:
-            for i in range(self.grado):
-                nuevo_nodo.hijos.append(nodo_hijo.hijos[self.grado])
-                nodo_hijo.hijos.pop(self.grado)
+        padre.hijo[posicion + 1] = nuevo
+        j = padre.claves_usadas
+        while j < posicion:
+            j -= 1
+            padre.claves[j+1] =padre.claves[j]
 
-    def _recorrer_arbol(self, nodo):
-        if nodo is not None:
-            for i in range(len(nodo.claves)):
-                if nodo.hoja:
-                    yield nodo.claves[i], nodo.hijos[i]  
-                else:
-                    yield from self._recorrer_arbol(nodo.hijos[i])
-                    yield nodo.claves[i], nodo.hijos[i]  
-            if not nodo.hoja:
-                yield from self._recorrer_arbol(nodo.hijos[-1])
-
-    def actualizar(self, clave, nuevos_datos):
-        return self._actualizar(self.raiz, clave, nuevos_datos)
-
-    def _actualizar(self, nodo, clave, nuevos_datos):
-        i = 0
-        while i < len(nodo.claves) and clave > nodo.claves[i]:
-            i += 1
-
-        if i < len(nodo.claves) and clave == nodo.claves[i]:
-            # Actualizar los datos de la persona (nodo.hijos[i]) solo si están presentes en nuevos_datos
-            if 'name' in nuevos_datos:
-                nodo.hijos[i].nombre = nuevos_datos['name']
-            if 'dpi' in nuevos_datos:
-                nodo.hijos[i].dpi = nuevos_datos['dpi']
-            if 'dateBirth' in nuevos_datos:
-                nodo.hijos[i].date_birth = nuevos_datos['dateBirth']
-            if 'address' in nuevos_datos:
-                nodo.hijos[i].address = nuevos_datos['address']
-            return True
-        elif nodo.hoja:
-            # La clave no se encontró en el árbol B
-            return False
-        else:
-            # Continuar la búsqueda en el siguiente nivel del árbol
-            return self._actualizar(nodo.hijos[i], clave, nuevos_datos)
-
-
-    def eliminar(self, clave):
-        if not self.raiz.claves:
-            return False
-
-        resultado, nuevo_nodo_raiz = self._eliminar(self.raiz, clave)
-
-        if nuevo_nodo_raiz is not None:
-            self.raiz = nuevo_nodo_raiz
-
-        return resultado
-
-    def _eliminar(self, nodo, clave):
-        i = 0
-        while i < len(nodo.claves) and clave > nodo.claves[i]:
-            i += 1
-
-        if i < len(nodo.claves) and clave == nodo.claves[i]:
-            if nodo.hoja:
-                del nodo.claves[i]
-                return True, None
-            else:
-                return self._eliminar_nodo_interno(nodo, clave, i)
-        else:
-            if nodo.hoja:
-                return False, None
-            else:
-                return self._eliminar_subarbol(nodo, clave, i)
-
-    def _eliminar_nodo_interno(self, nodo, clave, indice):
-        hijo_actual = nodo.hijos[indice]
-
-        if len(hijo_actual.claves) >= self.grado:
-            predecesor_clave, predecesor_persona = self._encontrar_predecesor(hijo_actual, indice)
-            resultado, nuevo_nodo_raiz = self._eliminar(hijo_actual, predecesor_clave)
-            nodo.claves[indice] = predecesor_clave
-            return resultado, nuevo_nodo_raiz
-
-        hijo_siguiente = nodo.hijos[indice + 1]
-
-        hijo_actual.claves.extend(nodo.claves[indice:indice + 1] + hijo_siguiente.claves)
-        hijo_actual.hijos.extend(hijo_siguiente.hijos)
-
-        del nodo.claves[indice]
-        del nodo.hijos[indice + 1]
-
-        if len(hijo_actual.claves) > (2 * self.grado) - 1:
-            predecesor_clave, predecesor_persona = self._encontrar_predecesor(hijo_actual, indice)
-            resultado, nuevo_nodo_raiz = self._eliminar(hijo_actual, predecesor_clave)
-            nodo.claves[indice] = predecesor_clave
-            return resultado, nuevo_nodo_raiz
-
-        return self._eliminar(hijo_actual, clave)
-
-    def _encontrar_predecesor(self, nodo, indice):
-        nodo_actual = nodo.hijos[indice]
-        while not nodo_actual.hoja:
-            nodo_actual = nodo_actual.hijos[-1]
-        return nodo_actual.claves[-1], nodo_actual.hijos[-1]
-
-    def _eliminar_subarbol(self, nodo, clave, indice):
-        hijo_actual = nodo.hijos[indice]
-        hermano_izquierdo = None
-        hermano_derecho = None
-
-        if indice > 0:
-            hermano_izquierdo = nodo.hijos[indice - 1]
-
-        if indice < len(nodo.claves):
-            hermano_derecho = nodo.hijos[indice + 1]
-
-        if hermano_derecho and len(hermano_derecho.claves) >= self.grado:
-            nodo.claves.insert(indice, hermano_derecho.claves.pop(0))
-            if not hermano_derecho.hoja:
-                nodo.hijos.insert(indice + 1, hermano_derecho.hijos.pop(0))
-            return self._eliminar(hijo_actual, clave)
-
-        elif hermano_izquierdo and len(hermano_izquierdo.claves) >= self.grado:
-            nodo.claves.insert(indice, hermano_izquierdo.claves.pop())
-            if not hermano_izquierdo.hoja:
-                nodo.hijos.insert(indice, hermano_izquierdo.hijos.pop())
-            return self._eliminar(hijo_actual, clave)
-
-        elif hermano_derecho:
-            hijo_actual.claves.append(nodo.claves.pop(indice))
-            if not hermano_derecho.hoja:
-                hijo_actual.hijos.append(hermano_derecho.hijos.pop(0))
-            nodo.hijos.pop(indice + 1)
-            return self._eliminar(hijo_actual, clave)
-
-        elif hermano_izquierdo:
-            hermano_izquierdo.claves.append(nodo.claves.pop(indice - 1))
-            if not hermano_izquierdo.hoja:
-                hermano_izquierdo.hijos.append(hijo_actual.hijos.pop(0))
-            nodo.hijos.pop(indice)
-            return self._eliminar(hermano_izquierdo, clave)
-
-    def buscar(self, clave):
-        return self._buscar(self.raiz, clave)
-
-    def _buscar(self, nodo, clave):
-        i = 0
-        while i < len(nodo.claves) and clave > nodo.claves[i]:
-            i += 1
-
-        if i < len(nodo.claves) and clave == nodo.claves[i]:
-            return nodo.hijos[i]  # Devolver el valor correspondiente
-        elif nodo.hoja:
-            return None  # La clave no se encontró en el árbol B
-        else:
-            return self._buscar(nodo.hijos[i], clave)
-
-
+        padre.claves[posicion] = hijo.claves[self.t - 1]
+        padre.claves_usadas += 1
 
 
 class VentanaPrincipal(QMainWindow):
@@ -257,34 +131,37 @@ class VentanaPrincipal(QMainWindow):
                 with open(archivo, 'r') as file:
                     lineas = file.readlines()
 
-                for linea in lineas[1:]:
-                    partes = linea.strip().split(';')
-                    if len(partes) >= 2:  # Verificar si hay al menos dos partes
-                        accion, json_str = partes[0], partes[1]
-                        if accion == 'INSERT':
-                            datos_json = json.loads(json_str)
-                            persona = Persona(
-                                datos_json.get('name', ''),         # Usar get() para manejar campos faltantes
-                                datos_json.get('dpi', ''),
-                                datos_json.get('dateBirth', ''),
-                                datos_json.get('address', '')
-                            )
-                            # Insertar en el árbol B
-                            self.arbol.insert(datos_json['dpi'], persona)
-                        elif accion == 'DELETE':
-                            datos_json = json.loads(json_str)
-                            dpi_a_eliminar = datos_json['dpi']
-                            # Eliminar del árbol B
-                            self.arbol.eliminar(dpi_a_eliminar)
-                        elif accion == 'PATCH':
-                            datos_json = json.loads(json_str)
-                            dpi_a_actualizar = datos_json['dpi']
-                            # Verificar si la clave existe en el diccionario de datos antes de actualizarla
-                            if self.arbol.buscar(dpi_a_actualizar):  # Asumiendo que tienes un método buscar en el árbol
-                                # Actualizar en el árbol B solo si la clave existe
-                                self.arbol.actualizar(dpi_a_actualizar, datos_json)
+                if len(lineas) >= 2:  # Verificar que haya al menos dos líneas (encabezado y al menos un dato)
+                    for linea in lineas[1:]:
+                        partes = linea.strip().split(';')
+                        if len(partes) >= 2:  # Verificar si hay al menos dos partes
+                            accion, json_str = partes[0], partes[1]
+                            if accion == 'INSERT':
+                                datos_json = json.loads(json_str)
+                                persona = Persona(
+                                    datos_json.get('name', ''),         # Usar get() para manejar campos faltantes
+                                    datos_json.get('dpi', ''),
+                                    datos_json.get('dateBirth', ''),
+                                    datos_json.get('address', '')
+                                )
+                                # Insertar en el árbol B
+                                self.arbol.insertar(persona)
+                            elif accion == 'DELETE':
+                                datos_json = json.loads(json_str)
+                                dpi_a_eliminar = datos_json['dpi']
+                                # Eliminar del árbol B
+                                self.arbol.eliminar(dpi_a_eliminar)
+                            elif accion == 'PATCH':
+                                datos_json = json.loads(json_str)
+                                dpi_a_actualizar = datos_json['dpi']
+                                # Verificar si la clave existe en el diccionario de datos antes de actualizarla
+                                if self.arbol.buscar(dpi_a_actualizar):  # Asumiendo que tienes un método buscar en el árbol
+                                    # Actualizar en el árbol B solo si la clave existe
+                                    self.arbol.actualizar(dpi_a_actualizar, datos_json)
 
-                QMessageBox.information(self, "Éxito", "Datos cargados exitosamente.")
+                    QMessageBox.information(self, "Éxito", "Datos cargados exitosamente.")
+                else:
+                    QMessageBox.warning(self, "Error", "El archivo está vacío o no contiene suficientes líneas para procesar.")
             except Exception as e:
                 print("Error al cargar datos:", str(e))
 
@@ -313,14 +190,14 @@ class VentanaPrincipal(QMainWindow):
                     QMessageBox.warning(self, "Error", "Formato JSON incorrecto. Asegúrate de ingresar los nuevos datos correctamente.")
 
     def mostrar(self):
-        dialogo = DialogoMostrarPersonas(self.arbol_personas.values())
+        dialogo = DialogoMostrarPersonas(self.arbol._recorrer_arbol(self.arbol.raiz))
         dialogo.exec_()
 
     def buscar(self):
         texto_buscar = self.input_buscar.text().lower()
         personas_encontradas = []
-        for dpi, persona in self.arbol_personas.items():
-            if texto_buscar in dpi.lower() or texto_buscar in persona.nombre.lower():
+        for clave, persona in self.arbol._recorrer_arbol(self.arbol.raiz):
+            if texto_buscar in clave.lower() or texto_buscar in persona.nombre.lower():
                 personas_encontradas.append(persona)
 
         if personas_encontradas:
@@ -436,22 +313,22 @@ class DialogoMostrarPersonas(QDialog):
                 with open(archivo_salida, 'w') as file:
                     file.write("ACTION;DATA\n")
                     for persona in self.personas:
-                        datos_json = {
+                        data = {
                             'name': persona.nombre,
                             'dpi': persona.dpi,
                             'dateBirth': persona.date_birth,
                             'address': persona.address
                         }
-                        json_str = json.dumps(datos_json)
-                        file.write(f"INSERT;{json_str}\n")
+                        data_str = json.dumps(data)
+                        file.write(f"INSERT;{data_str}\n")
 
                 QMessageBox.information(self, "Éxito", "Búsqueda exportada exitosamente.")
             except Exception as e:
                 print("Error al exportar la búsqueda:", str(e))
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ventana_principal = VentanaPrincipal()
-    ventana_principal.show()
+    ventana = VentanaPrincipal()
+    ventana.show()
     sys.exit(app.exec_())
+
