@@ -5,6 +5,7 @@ PATCH;{"name":"Luis Hernandez", "dpi":"12345678901234","dateBirth":"1990-07-15"}
 PATCH;{"name":"Sophia Rodriguez", "dpi":"23456789012345", "address":"789 Oak Rd, Medellin"}
 INSERT;{"name":"Carlos Mendoza","dpi":"34567890123456","dateBirth":"1978-12-01", "address":"567 Pine St, Lima"}
 INSERT;{"name":"Elena Chavez","dpi":"45678901234567","dateBirth":"1982-05-25", "address":"789 Maple Ave, Quito"}
+DELETE;{"name":"Luis Hernandez","dpi":"12345678901234"}
 INSERT;{"name":"Diego Morales","dpi":"56789012345678","dateBirth":"1999-02-18", "address":"890 Cedar Rd, Santiago"}
 INSERT;{"name":"Isabella Gomez","dpi":"67890123456789","dateBirth":"1989-11-07", "address":"123 Palm Ave, Buenos Aires"}
 PATCH;{"name":"Elena Chavez", "dpi":"45678901234567","address":"987 Pine St, Guayaquil"}
