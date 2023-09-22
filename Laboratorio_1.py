@@ -1,10 +1,8 @@
-from pickle import NONE
-import sys
-import json
-import math
-from this import s
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QDialog, QVBoxLayout, QTextEdit, QFileDialog, \
     QLineEdit, QLabel, QMessageBox, QInputDialog, QWidget, QHBoxLayout
+import sys
+import math
+import json
 
 class Persona:
     def __init__(self, nombre, dpi, date_birth, address):
@@ -16,80 +14,194 @@ class Persona:
 class Nodo:
     def __init__(self):
         self.claves = []
-        self.claves_usadas = 0
+        self.hijos = []
         self.hoja = True
-        self.hijo = []
 
 class ArbolB:
     def __init__(self, grado):
         self.grado = grado
-        self.lower = math.floor(self.grado-1)
-        self.upper = (2*grado - 1)
-        self.raiz = Nodo()
+        self.raiz = None
 
+    def insertar(self, persona):
+        if self.raiz is None:
+            self.raiz = Nodo()
+        if len(self.raiz.claves) == 2 * self.grado - 1:
+            nueva_raiz = Nodo()
+            nueva_raiz.hijos.append(self.raiz)
+            self.dividir(nueva_raiz, 0)
+            self.raiz = nueva_raiz
+        self.insertar_nodo(self.raiz, persona)
 
-    def insertar (self, persona):
-        if self.raiz.claves_usadas <= self.upper:
-            self.raiz.claves.append(persona)
-        else:
-            r = self.raiz
-            if self.raiz.claves_usadas == self.upper:
-                s = Nodo()
-                self.raiz = s
-                s.hoja = False
-                s.claves_usadas = 0
-                s.hijo[0] = r
-                self.dividir(s, 0, r)
-                self.insertar_Nodo(s, persona)
-            else:
-                self.insertar_Nodo(r, persona)
-
-    def insertar_Nodo (self, nodo, persona):
+    def insertar_nodo(self, nodo, persona):
+        i = len(nodo.claves) - 1
+        while i >= 0 and persona.dpi < nodo.claves[i].dpi:
+            i -= 1
+        i += 1
         if nodo.hoja:
-            i = nodo.claves_usadas
-            while i>=1 & persona.dpi < nodo.claves[i-1].dpi:
-                nodo.claves[i] = nodo.clave[i-1]
-                i -= 1
-            nodo.claves[i] = persona
-            nodo.claves_usadas += 1
+            nodo.claves.insert(i, persona)
         else:
-            j = 0
-            while j < nodo.claves_usadas & persona.dpi > nodo.clave[j].dpi:
-                j += 1
-            if nodo.hijo[j].claves_usadas == (2*self.t-1):
-                self.dividir(nodo, j, nodo.hijo[j])
-                if persona.dpi > nodo.claves[j]:
-                    j += 1
-            self.insertar_Nodo(nodo.hijo[j], persona)
+            if len(nodo.hijos) == 0:
+                nodo.hijos.append(None)  # Agregar primer hijo si no hay ninguno
+            if len(nodo.hijos[i].claves) == (2 * self.grado) - 1:
+                self.dividir(nodo, i)
+                if persona.dpi > nodo.claves[i].dpi:
+                    i += 1
+            self.insertar_nodo(nodo.hijos[i], persona)
 
-    def dividir(self, padre, posicion, hijo):
-        nuevo = Nodo()
-        nuevo.hoja = hijo.hoja
-        nuevo.claves_usadas = self.t -1
-        j = 0
-        while j < self.t - 1:
-            j += 1
-            nuevo.claves[j] =hijo.claves[j+self.t]
 
-        if (hijo.hoja == False):
-            k = 0
-            while k < self.t:
-                k += 2
-                nuevo.hijo[k] = hijo.hijo[k+s]
+    def dividir(self, nodo, indice):
+        nuevo_nodo = Nodo()
+        nodo_hijo = nodo.hijos[indice]
+        nodo.claves.insert(indice, nodo_hijo.claves.pop(self.grado - 1))
+        nuevo_nodo.hoja = nodo_hijo.hoja
+        nodo.hijos.insert(indice + 1, nuevo_nodo)
+        nodo.claves.insert(indice, nodo_hijo.claves.pop(self.grado - 1))
+        if not nodo_hijo.hoja:
+            nuevo_nodo.hijos.extend(nodo_hijo.hijos[self.grado:])
+            del nodo_hijo.hijos[self.grado:]
 
-        hijo.claves_usadas = self.t - 1
-        j = padre.claves_usadas
-        while j < posicion:
-            padre.hijo[j+1] = padre.hijo [j]
+    def mostrar(self):
+        if self.raiz is not None:
+            return self._recorrer_arbol(self.raiz)
+        else:
+            return []
 
-        padre.hijo[posicion + 1] = nuevo
-        j = padre.claves_usadas
-        while j < posicion:
-            j -= 1
-            padre.claves[j+1] =padre.claves[j]
+    def _recorrer_arbol(self, nodo):
+        resultados = []
 
-        padre.claves[posicion] = hijo.claves[self.t - 1]
-        padre.claves_usadas += 1
+        for i in range(len(nodo.claves)):
+            if not nodo.hoja:
+                resultados.extend(self._recorrer_arbol(nodo.hijos[i]))
+            resultados.append(nodo.claves[i])
+
+        if not nodo.hoja:
+            resultados.extend(self._recorrer_arbol(nodo.hijos[len(nodo.claves)]))
+
+        return resultados
+
+
+    def buscar(self, dpi):
+        if self.raiz is not None:
+            return self._buscar_en_arbol(self.raiz, dpi)
+        else:
+            return None
+
+    def _buscar_en_arbol(self, nodo, dpi):
+        i = 0
+        while i < len(nodo.claves) and dpi > nodo.claves[i].dpi:
+            i += 1
+        if i < len(nodo.claves) and dpi == nodo.claves[i].dpi:
+            return nodo.claves[i]
+        elif nodo.hoja:
+            return None
+        else:
+            return self._buscar_en_arbol(nodo.hijos[i], dpi)
+
+    def eliminar(self, dpi):
+        if self.raiz is not None:
+            eliminado, _ = self._eliminar_en_arbol(self.raiz, dpi)
+            if eliminado:
+                return True
+        return False
+
+    def _eliminar_en_arbol(self, nodo, dpi):
+        if nodo is None:
+            return False, None
+
+        indice = 0
+        while indice < len(nodo.claves) and dpi > nodo.claves[indice].dpi:
+            indice += 1
+
+        if indice < len(nodo.claves) and dpi == nodo.claves[indice].dpi:
+            if nodo.hoja:
+                nodo.claves.pop(indice)
+            else:
+                dpi_antecesor = self._obtener_dpi_antecesor(nodo, indice)
+                nodo.claves[indice] = dpi_antecesor
+                eliminado, nodo_modificado = self._eliminar_en_arbol(nodo.hijos[indice + 1], dpi_antecesor.dpi)
+                if nodo_modificado is not None:
+                    nodo.hijos[indice + 1] = nodo_modificado
+                if eliminado:
+                    eliminado, nodo_modificado = self._eliminar_en_arbol(nodo.hijos[indice], dpi)
+                    if nodo_modificado is not None:
+                        nodo.hijos[indice] = nodo_modificado
+
+        elif nodo.hoja:
+            return False, None
+
+        else:
+            if indice == len(nodo.claves):
+                indice -= 1
+            dpi_hijo = nodo.claves[indice]
+            if len(nodo.hijos[indice].claves) <= self.grado - 1:
+                hermano = None
+                if indice > 0 and len(nodo.hijos[indice - 1].claves) > self.grado - 1:
+                    hermano = nodo.hijos[indice - 1]
+                elif indice < len(nodo.hijos) - 1 and len(nodo.hijos[indice + 1].claves) > self.grado - 1:
+                    hermano = nodo.hijos[indice + 1]
+                if hermano:
+                    self._mover_clave(nodo, indice, hermano)
+                else:
+                    if indice > 0:
+                        hermano = nodo.hijos[indice - 1]
+                    else:
+                        hermano = nodo.hijos[indice + 1]
+                    nodo_modificado = self._combinar_nodos(nodo, indice, hermano)
+                    return self._eliminar_en_arbol(nodo_modificado, dpi)
+
+            eliminado, nodo_modificado = self._eliminar_en_arbol(nodo.hijos[indice], dpi)
+            if nodo_modificado is not None:
+                nodo.hijos[indice] = nodo_modificado
+
+        if len(nodo.claves) < self.grado - 1:
+            return False, None
+
+        return True, nodo
+
+    def _eliminar_en_nodo_no_hoja(self, nodo, indice):
+        dpi_antecesor = self._obtener_dpi_antecesor(nodo, indice)
+        if len(nodo.hijos[indice].claves) >= self.grado:
+            nodo.claves[indice] = dpi_antecesor
+            return self._eliminar_en_arbol(nodo.hijos[indice], dpi_antecesor.dpi)
+        elif len(nodo.hijos[indice + 1].claves) >= self.grado:
+            dpi_sucesor = self._obtener_dpi_sucesor(nodo, indice)
+            nodo.claves[indice] = dpi_sucesor
+            return self._eliminar_en_arbol(nodo.hijos[indice + 1], dpi_sucesor.dpi)
+        else:
+            self._combinar_nodos(nodo, indice)
+            return self._eliminar_en_arbol(nodo.hijos[indice], dpi_antecesor.dpi)
+
+    def _obtener_dpi_antecesor(self, nodo, indice):
+        nodo_actual = nodo.hijos[indice]
+        while not nodo_actual.hoja:
+            nodo_actual = nodo_actual.hijos[-1]
+        return nodo_actual.claves[-1]
+
+    def _obtener_dpi_sucesor(self, nodo, indice):
+        nodo_actual = nodo.hijos[indice + 1]
+        while not nodo_actual.hoja:
+            nodo_actual = nodo_actual.hijos[0]
+        return nodo_actual.claves[0]
+
+    def _combinar_nodos(self, nodo, indice):
+        hijo = nodo.hijos[indice]
+        hermano = nodo.hijos[indice + 1]
+        hijo.claves.append(nodo.claves[indice])
+        hijo.claves.extend(hermano.claves)
+        if not hijo.hoja:
+            hijo.hijos.extend(hermano.hijos)
+        del nodo.claves[indice]
+        del nodo.hijos[indice + 1]
+
+    def actualizar(self, dpi, nuevos_datos):
+        persona = self.buscar(dpi)
+        if persona:
+            persona.nombre = nuevos_datos.get('nombre', persona.nombre)
+            persona.date_birth = nuevos_datos.get('date_birth', persona.date_birth)
+            persona.address = nuevos_datos.get('address', persona.address)
+            return True
+        else:
+            return False
 
 
 class VentanaPrincipal(QMainWindow):
@@ -122,7 +234,7 @@ class VentanaPrincipal(QMainWindow):
         self.boton_eliminar.setGeometry(120, 250, 140, 40)
         self.boton_eliminar.clicked.connect(self.eliminar)
 
-        self.arbol = ArbolB(grado=3)
+        self.arbol = ArbolB(2)
 
     def cargar(self):
         archivo, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo TXT", "", "Text Files (*.txt)")
@@ -131,32 +243,28 @@ class VentanaPrincipal(QMainWindow):
                 with open(archivo, 'r') as file:
                     lineas = file.readlines()
 
-                if len(lineas) >= 2:  # Verificar que haya al menos dos líneas (encabezado y al menos un dato)
+                if len(lineas) >= 2:
                     for linea in lineas[1:]:
                         partes = linea.strip().split(';')
-                        if len(partes) >= 2:  # Verificar si hay al menos dos partes
+                        if len(partes) >= 2:
                             accion, json_str = partes[0], partes[1]
                             if accion == 'INSERT':
                                 datos_json = json.loads(json_str)
                                 persona = Persona(
-                                    datos_json.get('name', ''),         # Usar get() para manejar campos faltantes
+                                    datos_json.get('name', ''),
                                     datos_json.get('dpi', ''),
                                     datos_json.get('dateBirth', ''),
                                     datos_json.get('address', '')
                                 )
-                                # Insertar en el árbol B
                                 self.arbol.insertar(persona)
                             elif accion == 'DELETE':
                                 datos_json = json.loads(json_str)
                                 dpi_a_eliminar = datos_json['dpi']
-                                # Eliminar del árbol B
                                 self.arbol.eliminar(dpi_a_eliminar)
                             elif accion == 'PATCH':
                                 datos_json = json.loads(json_str)
                                 dpi_a_actualizar = datos_json['dpi']
-                                # Verificar si la clave existe en el diccionario de datos antes de actualizarla
-                                if self.arbol.buscar(dpi_a_actualizar):  # Asumiendo que tienes un método buscar en el árbol
-                                    # Actualizar en el árbol B solo si la clave existe
+                                if self.arbol.buscar(dpi_a_actualizar):
                                     self.arbol.actualizar(dpi_a_actualizar, datos_json)
 
                     QMessageBox.information(self, "Éxito", "Datos cargados exitosamente.")
@@ -190,90 +298,22 @@ class VentanaPrincipal(QMainWindow):
                     QMessageBox.warning(self, "Error", "Formato JSON incorrecto. Asegúrate de ingresar los nuevos datos correctamente.")
 
     def mostrar(self):
-        dialogo = DialogoMostrarPersonas(self.arbol._recorrer_arbol(self.arbol.raiz))
-        dialogo.exec_()
+        personas = self.arbol.mostrar()
+        if personas:
+            dialogo = DialogoMostrarPersonas(personas)
+            dialogo.exec_()
+        else:
+            QMessageBox.warning(self, "Error", "El árbol B está vacío.")
 
     def buscar(self):
         texto_buscar = self.input_buscar.text().lower()
-        personas_encontradas = []
-        for clave, persona in self.arbol._recorrer_arbol(self.arbol.raiz):
-            if texto_buscar in clave.lower() or texto_buscar in persona.nombre.lower():
-                personas_encontradas.append(persona)
-
-        if personas_encontradas:
-            dialogo = DialogoMostrarPersonas(personas_encontradas)
-            resultado = dialogo.exec_()
-            if resultado == QDialog.Accepted:
-                archivo_salida, _ = QFileDialog.getSaveFileName(self, "Guardar Búsqueda como TXT", "", "Text Files (*.txt)")
-                if archivo_salida:
-                    try:
-                        with open(archivo_salida, 'w') as file:
-                            file.write("RESULTADO DE LA BÚSQUEDA\n")
-                            for persona in personas_encontradas:
-                                file.write(f"DPI: {persona.dpi}\n")
-                                file.write(f"Nombre: {persona.nombre}\n")
-                                file.write(f"Fecha de Nacimiento: {persona.date_birth}\n")
-                                file.write(f"Dirección: {persona.address}\n")
-                                file.write("\n")
-
-                        QMessageBox.information(self, "Éxito", "Búsqueda exportada exitosamente.")
-                    except Exception as e:
-                        print("Error al exportar la búsqueda:", str(e))
+        persona_encontrada = self.arbol.buscar(texto_buscar)
+        if persona_encontrada:
+            dialogo = DialogoMostrarPersonas([persona_encontrada])
+            dialogo.exec_()
         else:
             QMessageBox.warning(self, "Error", "No se encontró ninguna persona con el DPI o nombre especificado en la búsqueda.")
 
-
-class DialogoActualizar(QDialog):
-    def __init__(self, persona):
-        super().__init__()
-
-        self.setWindowTitle("Actualizar Persona")
-        self.setGeometry(200, 200, 400, 200)
-
-        self.layout = QVBoxLayout()
-
-        self.label_nombre = QLabel("Nombre:")
-        self.input_nombre = QLineEdit()
-        self.label_dpi = QLabel("DPI:")
-        self.input_dpi = QLineEdit()
-        self.label_fecha_nacimiento = QLabel("Fecha de Nacimiento (AAAA-MM-DD):")
-        self.input_fecha_nacimiento = QLineEdit()
-        self.label_direccion = QLabel("Dirección:")
-        self.input_direccion = QLineEdit()
-
-        self.layout.addWidget(self.label_nombre)
-        self.layout.addWidget(self.input_nombre)
-        self.layout.addWidget(self.label_dpi)
-        self.layout.addWidget(self.input_dpi)
-        self.layout.addWidget(self.label_fecha_nacimiento)
-        self.layout.addWidget(self.input_fecha_nacimiento)
-        self.layout.addWidget(self.label_direccion)
-        self.layout.addWidget(self.input_direccion)
-
-        self.boton_aceptar = QPushButton("Aceptar", self)
-        self.boton_cancelar = QPushButton("Cancelar", self)
-        self.boton_aceptar.clicked.connect(self.accept)
-        self.boton_cancelar.clicked.connect(self.reject)
-        self.layout.addWidget(self.boton_aceptar)
-        self.layout.addWidget(self.boton_cancelar)
-
-        self.setLayout(self.layout)
-
-        self.persona = persona
-        self.cargar_datos()
-
-    def cargar_datos(self):
-        self.input_nombre.setText(self.persona.nombre)
-        self.input_dpi.setText(self.persona.dpi)
-        self.input_fecha_nacimiento.setText(self.persona.date_birth)
-        self.input_direccion.setText(self.persona.address)
-
-    def accept(self):
-        self.persona.nombre = self.input_nombre.text()
-        self.persona.dpi = self.input_dpi.text()
-        self.persona.date_birth = self.input_fecha_nacimiento.text()
-        self.persona.address = self.input_direccion.text()
-        super().accept()
 
 class DialogoMostrarPersonas(QDialog):
     def __init__(self, personas):
@@ -311,24 +351,21 @@ class DialogoMostrarPersonas(QDialog):
         if archivo_salida:
             try:
                 with open(archivo_salida, 'w') as file:
-                    file.write("ACTION;DATA\n")
+                    file.write("RESULTADO DE LA BÚSQUEDA\n")
                     for persona in self.personas:
-                        data = {
-                            'name': persona.nombre,
-                            'dpi': persona.dpi,
-                            'dateBirth': persona.date_birth,
-                            'address': persona.address
-                        }
-                        data_str = json.dumps(data)
-                        file.write(f"INSERT;{data_str}\n")
+                        file.write(f"DPI: {persona.dpi}\n")
+                        file.write(f"Nombre: {persona.nombre}\n")
+                        file.write(f"Fecha de Nacimiento: {persona.date_birth}\n")
+                        file.write(f"Dirección: {persona.address}\n")
+                        file.write("\n")
 
                 QMessageBox.information(self, "Éxito", "Búsqueda exportada exitosamente.")
             except Exception as e:
                 print("Error al exportar la búsqueda:", str(e))
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ventana = VentanaPrincipal()
     ventana.show()
     sys.exit(app.exec_())
-
