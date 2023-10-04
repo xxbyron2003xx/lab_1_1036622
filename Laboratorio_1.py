@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QDialog, QVB
     QLineEdit, QLabel, QMessageBox, QInputDialog, QWidget, QHBoxLayout
 import sys
 import json
+import os
+from PyQt5.QtWidgets import QTextBrowser
 
 class Persona:
     def __init__(self, nombre, dpi, date_birth, address):
@@ -274,43 +276,48 @@ class VentanaPrincipal(QMainWindow):
         self.boton_eliminar.setGeometry(120, 210, 140, 40)
         self.boton_eliminar.clicked.connect(self.eliminar)
 
+        self.boton_mostrar_datos = QPushButton("Mostrar Datos", self)
+        self.boton_mostrar_datos.setGeometry(120, 360, 140, 40)
+        self.boton_mostrar_datos.clicked.connect(self.mostrar_datos)
+
         self.arbol = ArbolB(2)
 
     def cargar(self):
-        archivo, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo TXT", "", "Text Files (*.txt)")
+        archivo, _ = QFileDialog.getOpenFileName(self, "Seleccionar archivo TXT", "", "TXT Files (*.txt)")
         if archivo:
             try:
-                with open(archivo, 'r') as file:
-                    lineas = file.readlines()
+                archivo_absoluto = os.path.abspath(archivo)
+                with open(archivo_absoluto, 'r') as file:
+                    for line in file:
+                        parts = line.strip().split(';')
+                        if len(parts) == 2:
+                            accion = parts[0]
+                            datos_json = parts[1]
 
-                if len(lineas) >= 2:
-                    for linea in lineas[1:]:
-                        partes = linea.strip().split(';')
-                        if len(partes) >= 2:
-                            accion, json_str = partes[0], partes[1]
-                            try:
-                                datos_json = json.loads(json_str)
-                                if accion == 'INSERT':
+                            if accion == 'INSERT':
+                                try:
+                                    datos = json.loads(datos_json)
                                     persona = Persona(
-                                        datos_json.get('nombre', ''),
-                                        datos_json.get('dpi', ''),
-                                        datos_json.get('dateBirth', ''),
-                                        datos_json.get('address', '')
+                                        datos['name'],
+                                        datos['dpi'],
+                                        datos['dateBirth'],
+                                        datos['address']
                                     )
                                     self.arbol.insertar(persona)
-                                elif accion == 'DELETE':
-                                    dpi_a_eliminar = datos_json['dpi']
-                                    self.arbol.eliminar(dpi_a_eliminar)
-                                elif accion == 'PATCH':
-                                    dpi_a_actualizar = datos_json['dpi']
+                                except json.JSONDecodeError as e:
+                                    QMessageBox.warning(self, "Advertencia", f"No se pudo cargar la línea debido a un error de JSON: {str(e)}")
+                            elif accion == 'DELETE':
+                                dpi_a_eliminar = datos_json
+                                self.arbol.eliminar(dpi_a_eliminar)
+                            elif accion == 'PATCH':
+                                try:
+                                    datos = json.loads(datos_json)
+                                    dpi_a_actualizar = datos['dpi']
                                     if self.arbol.buscar(dpi_a_actualizar, self.arbol.raiz):
-                                        self.arbol.actualizar(dpi_a_actualizar, datos_json)
-                            except json.JSONDecodeError as e:
-                                print(f"Error al cargar datos JSON: {str(e)}")
-                                continue  # Continuar con la siguiente línea en caso de error
+                                        self.arbol.actualizar(dpi_a_actualizar, datos)
+                                except json.JSONDecodeError as e:
+                                    QMessageBox.warning(self, "Advertencia", f"No se pudo cargar la línea debido a un error de JSON: {str(e)}")
                     QMessageBox.information(self, "Éxito", "Datos cargados exitosamente.")
-                else:
-                    QMessageBox.warning(self, "Error", "El archivo está vacío o no contiene suficientes líneas para procesar.")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Error al cargar el archivo: {str(e)}")
 
@@ -354,6 +361,27 @@ class VentanaPrincipal(QMainWindow):
                 QMessageBox.information(self, "Éxito", "Persona eliminada exitosamente.")
             else:
                 QMessageBox.warning(self, "Error", "No se encontró ninguna persona con el DPI especificado.")
+
+    def mostrar_datos(self):
+        datos = self.arbol.mostrar()
+        if datos:
+            dialogo_mostrar = MostrarDatosDialog("\n".join(datos))
+            dialogo_mostrar.exec_()
+
+class MostrarDatosDialog(QDialog):
+    def __init__(self, datos):
+        super().__init__()
+
+        self.setWindowTitle("Mostrar Datos")
+        self.setGeometry(100, 100, 400, 400)
+
+        layout = QVBoxLayout()
+
+        self.texto_datos = QTextBrowser(self)
+        self.texto_datos.setPlainText(datos)
+        layout.addWidget(self.texto_datos)
+
+        self.setLayout(layout)
 
 class ActualizarPersonaDialog(QDialog):
     def __init__(self, persona):
